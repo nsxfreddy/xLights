@@ -282,11 +282,12 @@ public:
             curl_easy_setopt(curl, CURLOPT_MAXREDIRS, 50L);
             curl_easy_setopt(curl, CURLOPT_TCP_KEEPALIVE, 1L);
             curl_easy_setopt(curl, CURLOPT_TIMEOUT, timeout);
+            curl_easy_setopt(curl, CURLOPT_ACCEPT_ENCODING, "gzip");
 
 #ifdef __WXMSW__
             // Temporarily adding this in order to try to catch ongoing curl crashes
-            curl_easy_setopt(curl, CURLOPT_DEBUGFUNCTION, CurlDebug);
-            curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L); 
+            //curl_easy_setopt(curl, CURLOPT_DEBUGFUNCTION, CurlDebug);
+            //curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L); 
 #endif
 
             struct curl_slist* headerlist = nullptr;

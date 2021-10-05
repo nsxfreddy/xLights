@@ -610,6 +610,7 @@ void UDControllerPort::CreateVirtualStrings(bool mergeSequential) {
             current->_universe = it->GetUniverse();
             current->_universeStartChannel = it->GetUniverseStartChannel();
             current->_channelsPerPixel = it->GetChannelsPerPixel();
+            if (current->_channelsPerPixel == 1) current->_channelsPerPixel = 3; // this happens if a channel block is dropped first on a port and we dont want that
             current->_smartRemote = it->GetSmartRemote();
 
             if (gamma == -9999) {
@@ -1359,6 +1360,11 @@ void UDController::Dump() const {
     for (const auto& it : _ledPanelMatrixPorts) {
         it.second->Dump();
     }
+}
+
+bool UDController::IsError(const std::string& check)
+{
+    return Contains(check, "ERR:");
 }
 
 bool UDController::Check(const ControllerCaps* rules, std::string& res) {

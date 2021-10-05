@@ -1073,7 +1073,7 @@ bool Falcon::V4_PopulateStrings(std::vector<FALCON_V4_STRING>& uploadStrings, co
                         str.colourOrder = it->_colourOrderSet ? V4_EncodeColourOrder(it->_colourOrder) : colourOrder;
                         str.direction = it->_reverseSet ? (it->_reverse == "F" ? 0 : 1) : direction;
                         str.group = it->_groupCountSet ? it->_groupCount : group;
-                        str.pixels = it->Channels() / it->_channelsPerPixel;
+                        str.pixels = it->Channels() / it->_channelsPerPixel * str.group;
                         str.protocol = protocols[p / 16];
                         V4_GetStartChannel(it->_universe, it->_universeStartChannel, it->_startChannel, str.universe, str.startChannel);
 
@@ -1203,7 +1203,7 @@ bool Falcon::V4_SetOutputs(ModelManager* allmodels, OutputManager* outputManager
 
     cud.Dump();
 
-    if (cud.GetMaxPixelPort() > 0 && caps->GetMaxPixelPort() > 0 && check != "") {
+    if (cud.GetMaxPixelPort() > 0 && caps->GetMaxPixelPort() > 0 && UDController::IsError(check)) {
         DisplayError("Not uploaded due to errors.\n" + check);
         check = "";
         if (doProgress) progress->Update(100, "Aborting.");
@@ -2869,7 +2869,7 @@ bool Falcon::SetOutputs(ModelManager* allmodels, OutputManager* outputManager, C
         UploadStringPorts(stringData, maxMain, maxDaughter1, maxDaughter2, minuniverse, defaultBrightness, firstchanneloncontroller);
     }
     else {
-        if (stringData.size() > 0 && caps->GetMaxPixelPort() > 0 && check != "") {
+        if (stringData.size() > 0 && caps->GetMaxPixelPort() > 0 && UDController::IsError(check)) {
             DisplayError("Not uploaded due to errors.\n" + check);
             check = "";
         }
@@ -2907,7 +2907,7 @@ bool Falcon::SetOutputs(ModelManager* allmodels, OutputManager* outputManager, C
         }
     }
     else {
-        if (caps->GetMaxSerialPort() > 0 && check != "") {
+        if (caps->GetMaxSerialPort() > 0 && UDController::IsError(check)) {
             DisplayError("Not uploaded due to errors.\n" + check);
         }
     }

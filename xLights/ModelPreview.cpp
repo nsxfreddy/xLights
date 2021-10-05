@@ -490,7 +490,7 @@ void ModelPreview::DoPaint()
     }
 }
 
-void ModelPreview::RenderModels(const std::vector<Model*>& models, bool isModelSelected)
+void ModelPreview::RenderModels(const std::vector<Model*>& models, bool isModelSelected, bool highlightFirst)
 {
     float minx = 999999;
     float maxx = -999999;
@@ -529,14 +529,14 @@ void ModelPreview::RenderModels(const std::vector<Model*>& models, bool isModelS
             else
             {
                 if (is_3d) {
-                    m->DisplayModelOnWindow(this, solidAccumulator3d, transparentAccumulator3d, linesAccumulator3d, true, color, allowSelected);
+                    m->DisplayModelOnWindow(this, solidAccumulator3d, transparentAccumulator3d, linesAccumulator3d, true, color, allowSelected, false, highlightFirst);
                 }
                 else {
                     float mix = 999999;
                     float max = -999999;
                     float miy = 999999;
                     float may = -999999;
-                    m->DisplayModelOnWindow(this, solidAccumulator, transparentAccumulator, mix, miy, max, may, false, color, allowSelected);
+                    m->DisplayModelOnWindow(this, solidAccumulator, transparentAccumulator, mix, miy, max, may, false, color, allowSelected, highlightFirst);
                     if (color == selColor)
                     {
                         if (mix < minx) minx = mix;
@@ -566,10 +566,10 @@ void ModelPreview::RenderModels(const std::vector<Model*>& models, bool isModelS
                             float miy = 999999;
                             float may = -999999;
                             if (is_3d) {
-                                sm->DisplayModelOnWindow(this, solidAccumulator3d, transparentAccumulator3d, linesAccumulator3d, true, color, allowSelected);
+                                sm->DisplayModelOnWindow(this, solidAccumulator3d, transparentAccumulator3d, linesAccumulator3d, true, color, allowSelected, false, highlightFirst);
                             }
                             else {
-                                sm->DisplayModelOnWindow(this, solidAccumulator, transparentAccumulator, mix, miy, max, may, false, color, allowSelected);
+                                sm->DisplayModelOnWindow(this, solidAccumulator, transparentAccumulator, mix, miy, max, may, false, color, allowSelected, highlightFirst);
                             }
                             if (color == selColor)
                             {
@@ -629,7 +629,7 @@ void ModelPreview::RenderModel(Model* m, bool wiring, bool highlightFirst, int h
             m->SetPixelSize(oldpixelSize);
         }
         else {
-            m->DisplayModelOnWindow(this, solidAccumulator, transparentAccumulator, minx, miny, maxx, maxy, false, defColor, false);
+            m->DisplayModelOnWindow(this, solidAccumulator, transparentAccumulator, minx, miny, maxx, maxy, false, defColor, false, highlightFirst);
         }
         EndDrawing();
     }
@@ -652,7 +652,7 @@ void ModelPreview::Render()
                 wxASSERT(false); // why did we get here
             }
         }
-        RenderModels(models, isModelSelected);
+        RenderModels(models, isModelSelected, _showFirstPixel);
     }
 
     // draw all the view objects
@@ -808,12 +808,12 @@ void ModelPreview::Reset()
     }
 }
 
-ModelPreview::ModelPreview(wxPanel* parent, xLightsFrame* xlights_, bool a, int styles, bool apc)
+ModelPreview::ModelPreview(wxPanel* parent, xLightsFrame* xlights_, bool a, int styles, bool apc, bool showFirstPixel)
     : xlGLCanvas(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, styles, a ? "Layout" : "Preview", false),
     virtualWidth(0), virtualHeight(0), _display2DBox(false), _center2D0(false),
     image(nullptr), sprite(nullptr), allowSelected(a), allowPreviewChange(apc), mPreviewPane(nullptr),
     xlights(xlights_), currentModel("&---none---&"),  currentLayoutGroup("Default"), additionalModel(nullptr), is_3d(false), m_mouse_down(false), m_wheel_down(false),
-    m_last_mouse_x(-1), m_last_mouse_y(-1), camera3d(nullptr), renderOrder(0), camera2d(nullptr)
+    m_last_mouse_x(-1), m_last_mouse_y(-1), camera3d(nullptr), renderOrder(0), camera2d(nullptr), _showFirstPixel(showFirstPixel)
 {
     SetBackgroundStyle(wxBG_STYLE_CUSTOM);
     setupCameras();

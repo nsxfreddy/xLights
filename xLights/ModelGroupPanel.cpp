@@ -340,6 +340,7 @@ bool canAddToGroup(ModelGroup *g, ModelManager &models, const std::string &model
 void ModelGroupPanel::UpdatePanel(const std::string& group)
 {
     // static log4cpp::Category& logger_base = log4cpp::Category::getInstance(std::string("log_base"));
+    static wxColour BLUE_ON_DARK(100, 100, 255);
 
     int spam = ListBoxAddToModelGroup->GetTopItem();
     int spig = ListBoxModelsInGroup->GetTopItem();
@@ -380,7 +381,17 @@ void ModelGroupPanel::UpdatePanel(const std::string& group)
         std::list<std::string> modelsInGroup;
         modelsInGroup.push_back(g->GetName());
         for (const auto& it : g->ModelNames()) {
-            ListBoxModelsInGroup->InsertItem(ListBoxModelsInGroup->GetItemCount(), it);
+            long item = ListBoxModelsInGroup->InsertItem(ListBoxModelsInGroup->GetItemCount(), it);
+            if (mModels[it] != nullptr) {
+                if (mModels[it]->GetDisplayAs() == "ModelGroup") {
+                    ListBoxModelsInGroup->SetItemTextColour(item,
+                                                            wxSystemSettings::GetAppearance().IsDark()
+                                                                ? BLUE_ON_DARK : *wxBLUE);
+                }
+                else if (Contains(it, "/")) {
+                    ListBoxModelsInGroup->SetItemTextColour(item, xlORANGE.asWxColor());
+                }
+            }
             modelsInGroup.push_back(it);
         }
 
@@ -398,7 +409,13 @@ void ModelGroupPanel::UpdatePanel(const std::string& group)
                     }
                     else {
                         if (filter == "" || Contains(::Lower(it.first), filter)) {
-                            ListBoxAddToModelGroup->InsertItem(ListBoxAddToModelGroup->GetItemCount(), it.first);
+                            long item = ListBoxAddToModelGroup->InsertItem(ListBoxAddToModelGroup->GetItemCount(), it.first);
+                            if (it.second->GetDisplayAs() == "ModelGroup") {
+                                ListBoxAddToModelGroup->SetItemTextColour(item,
+                                                                          wxSystemSettings::GetAppearance().IsDark()
+                                                                              ? BLUE_ON_DARK
+                                                                              : *wxBLUE);
+                            }
                         }
                     }
                     if (CheckBox_ShowSubmodels->GetValue()) {
@@ -407,7 +424,8 @@ void ModelGroupPanel::UpdatePanel(const std::string& group)
 
                             if (std::find(g->ModelNames().begin(), g->ModelNames().end(), sm->GetFullName()) == g->ModelNames().end()) {
                                 if (filter == "" || Contains(::Lower(sm->GetFullName()), filter)) {
-                                    ListBoxAddToModelGroup->InsertItem(ListBoxAddToModelGroup->GetItemCount(), sm->GetFullName());
+                                    long item = ListBoxAddToModelGroup->InsertItem(ListBoxAddToModelGroup->GetItemCount(), sm->GetFullName());
+                                    ListBoxAddToModelGroup->SetItemTextColour(item, xlORANGE.asWxColor());
                                 }
                             }
                         }

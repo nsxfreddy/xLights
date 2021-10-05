@@ -2570,8 +2570,12 @@ static void setRangesToChannelCount(DiscoveredData *inst) {
     if (count < 512) {
         count = 512;
     }
-    inst->controller->GetOutputs().front()->SetChannels(count);
+
+    // This will create universes if E131 or just set DDP
+    std::list<Model*> models;
+    inst->controller->SetChannelSize(count, models, 512);
 }
+
 static void SetControllerType(DiscoveredData *inst) {
     if (inst->pixelControllerType != "") {
         std::string v, m, var;
@@ -3212,4 +3216,37 @@ void FPP::TypeIDtoControllerType(int typeId, FPP* inst) {
     } else if (typeId == 0xC2 || typeId == 0xC3) {
         inst->fppType = FPP_TYPE::ESPIXELSTICK;
     }
+}
+
+std::vector<std::string> FPP::GetProxies()
+{
+    static log4cpp::Category& logger_base = log4cpp::Category::getInstance(std::string("log_base"));
+
+    std::vector<std::string> res;
+
+    if (IsConnected())         {
+        wxJSONValue val;
+        if (GetURLAsJSON("/api/proxies", val)) {
+            for (int x = 0; x < val.Size(); x++) {
+                if (val[x].IsString()) {
+                    logger_base.debug("FPP %s proxies %s.", (const char*)ipAddress.c_str(), (const char*)val[x].AsString().c_str());
+                    res.push_back(val[x].AsString());
+                }
+            }
+        }
+    }
+
+    return res;
+}
+
+// returns true if proxy FPP is available and the to address is in its proxy table
+bool FPP::ValidateProxy(const std::string& to, const std::string& via)
+{
+    FPP fpp(via);
+    if (fpp.IsConnected()) {
+        for (const auto& it : fpp.GetProxies()) {
+            if (to == it) return true;
+        }
+    }
+    return false;
 }
