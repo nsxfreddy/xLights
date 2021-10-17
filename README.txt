@@ -11,6 +11,65 @@ Issue Tracker is found here: www.github.com/smeighan/xLights/issues
 
 XLIGHTS/NUTCRACKER RELEASE NOTES
 ---------------------------------
+2021.33 October 16, 2021
+   -- enh (keith) Add in validations for null pixels and group maximums for controllers
+   -- enh (keith) Add in a bunch of validations on the start channel dialog
+   -- enh (keith) Add ability to save/load dmx effect mappings
+   -- enh (keith) Double click on model removes it from the port.
+   -- enh (keith) When double clicking to add model to port scroll the controller so it is visible
+   -- enh (scott) Add detailed messages to multi controller upload
+   -- enh (scott) Enhance visualiser exporr with start channel and pixel count properties
+   -- bug (keith) Put in some protections for stupid long sequences in sequence settings. Also defer actually setting the sequence length until it is actually required.
+   -- bug (keith) Fix batch render shows sequences in backup folders even when told not to
+   -- bug (keith) Fix some artificial WS2811 protocol chips not showing in protocol list
+   -- bug (keith) Fix fire more than once sequences repeat fire if less than 1 minute long
+   -- bug (keith) Fix stars converting from old start location properties can end up corrupting rgbeffects file
+   -- bug (keith) Force Falcon V3 smart remote uploads to be one pixel for unused ports
+   -- bug (keith) Fix hide models on other controllers on visualiser does not always make sense
+   -- bug (keith) Fix windows stack walks are broken
+   -- bug (keith) Add filename checks to many effect properties to prevent filenames that wont save correctly
+   -- bug (keith) Add exception handler to prevent .net plugins crashing xSchedule
+   -- bug (keith) Fix hangs when zooming in on layout with grid visible
+   -- bug (keith) Fix some rendered face issues. This likely breaks anyone still using xLights 3 face effect definitions ... but it is time to get with the times guys.
+   -- bug (dkulp) Fix occasional corruption of FPP serial outputs
+   -- bug (dkulp) Fix issues with single channel custom models in groups not rendering simple things like "On" effects properly if Horiz/Vert per model selected.
+   -- bug (scott) Fix empty import view crash
+   -- bug (scott) Fix check sequence crash if no controller port assigned on a model
+2021.32 October 10, 2021
+   -- enh (keith) Add an optional alignment grid to the 2D layout
+   -- enh (keith) Increase 3D clipping depth on layout for larger displays
+   -- ehh (keith) Increase tooltip duration and add a bunch of new tips
+   -- enh (keith) Validate controller IP on controller tab
+   -- bug (keith) Fix effect panels enabling/disabling broken after render all
+   -- bug (keith) Fix crash rendering text effect for non-true type fonts
+   -- bug (keith) Fix VU meter timing event random bar not lighting rightmost bar
+   -- bug (keith) Fix import of timing track auto selected if existing instance of that timing track has no marks
+   -- bug (keith) Fix DMX effect does not save correctly as a state
+   -- bug (keith) Fix double click on effect does not work if scrolled horizontally
+   -- bug (scott) Add back easylights 16 code until firmware fixes are released
+2021.31 October 7, 2021
+   -- enh (david) Linux set TCP_NODELAY for OpenPixelControl TCP Output
+   -- enh (jason) Add virtual matrix to pi hat capabilities
+   -- enh (scott) Added purple highlight to State Dialog, Selecting Grid Header will populate all nodes with force color if enabled or white
+   -- enh (scott) Add ArtNet upload to ESPPixelStick V4
+   -- enh (dkulp) Add multi-colour emojis to windows
+   -- enh (keith) Report duplicate nodes in submodels in check sequence
+   -- enh (keith) Add cyan first pixel to 2D as well - disable it for single node models
+   -- enh (keith) Allow selection of gif files in movie effect
+   -- enh (keith) More xScanner enhancements. Recognise more controllers. Faster execution.
+   -- enh (keith) Warn every time xLights starts if the current show folder is in a backup folder
+   -- enh (keith) In check sequence add validations to string start nodes highlighting common errors
+   -- bug (keith) Fix double click on effects at maximum zoom can choose the wrong effect 
+   -- bug (keith) For single colour custom models where all nodes only occupy one cell go back to old buffer style
+   -- bug (keith) Fix select effects wont select effects that have no colour selected
+   -- bug (keith) Fix universe per string not updating if the number of channels on controller does not change
+   -- bug (keith) Fix XL font vertical and rotated 90 degree movement
+   -- bug (keith) Fix a crash when loading FSEQ files
+   -- bug (keith) Fix timing panel reverse checkboxes not being reset resulting in weird UI behaviour
+   -- bug (keith) Prevent Pixlite upload sending a group count of 0
+   -- bug (keith) Fix when channel block is first model on a Falcon V4 port an incorrect number of channels are configured
+   -- bug (keith) Allow falcon to upload even when warnings are reported
+   -- bug (scott) Fix layered arch start location
 2021.30 September 28, 2021
    -- enh (dkulp) Add Mr/Mrs Claus, Christmas Tree, Gift emoji to popup list
    -- enh (dkulp) Add skin tone for Emoji's (ShapeEffect)

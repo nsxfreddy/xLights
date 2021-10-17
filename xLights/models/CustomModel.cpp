@@ -508,7 +508,8 @@ void CustomModel::GetBufferSize(const std::string& type, const std::string& came
     int height = parm2;
     int depth = _depth;
 
-    if (SingleNode || SingleChannel) {
+    if ((SingleNode || SingleChannel) && IsMultiCoordsPerNode())
+    {
         BufferWi = GetCustomMaxChannel(ModelXml->GetAttribute("CustomModel"));
         BufferHi = 1;
     }
@@ -579,23 +580,28 @@ void CustomModel::InitRenderBufferNodes(const std::string& type, const std::stri
 
     wxASSERT(width > 0 && height > 0 && depth > 0);
 
+    int startNodeSize = Nodes.size();
     Model::InitRenderBufferNodes(type, camera, transform, Nodes, BufferWi, BufferHi);
 
-    if (SingleChannel || SingleNode) {
+    if ((SingleChannel || SingleNode) && IsMultiCoordsPerNode()) {
         // I am not 100% about this change but it makes sense to me
         // While the custom model may have a height and width if it is single channel then the render buffer really should be Nodes x 1
         // and all nodes should point to one cell.
         // Without this change effects like twinkle do really strange things
-        BufferWi = Nodes.size();
+        BufferWi = Nodes.size() - startNodeSize;
         BufferHi = 1;
         int x = 0;
-        for (auto& it : Nodes) {
-            for (auto& it2 : it->Coords) {
+        while (startNodeSize < Nodes.size()) {
+            for (auto& it2 : Nodes[startNodeSize]->Coords) {
                 it2.bufX = x;
                 it2.bufY = 0;
             }
             x++;
+            startNodeSize++;
         }
+        return;
+    }
+    else if (SingleChannel || SingleNode) {
         return;
     }
 

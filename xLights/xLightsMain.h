@@ -1192,8 +1192,8 @@ public:
     void ActivateSelectedControllers(const std::string& active);
     void SelectAllControllers();
     ControllerCaps* GetControllerCaps(const std::string& name);
-    bool UploadInputToController(Controller* controller);
-    bool UploadOutputToController(Controller* controller);
+    bool UploadInputToController(Controller* controller, wxString& message);
+    bool UploadOutputToController(Controller* controller, wxString& message);
     int GetFirstSelectedControllerIndex() const;
     std::list<std::string> GetSelectedControllerNames() const;
     void OnListControllerPopup(wxCommandEvent& event);
@@ -1484,6 +1484,10 @@ public:
     void SetPreviewBackgroundImage(const wxString &filename);
     void SetDisplay2DBoundingBox(bool bb);
     bool GetDisplay2DBoundingBox() const;
+    void SetDisplay2DGrid(bool grid);
+    bool GetDisplay2DGrid() const;
+    void SetDisplay2DGridSpacing(long gridSpacing);
+    long GetDisplay2DGridSpacing() const;
     void SetDisplay2DCenter0(bool bb);
     bool GetDisplay2DCenter0() const;
     const wxString & GetDefaultPreviewBackgroundImage();

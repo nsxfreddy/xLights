@@ -61,7 +61,6 @@ const long ControllerModelDialog::ID_SPLITTERWINDOW1 = wxNewId();
 
 const long ControllerModelDialog::CONTROLLERModel_PRINT = wxNewId();
 const long ControllerModelDialog::CONTROLLERModel_SAVE_CSV = wxNewId();
-const long ControllerModelDialog::CONTROLLERModel_SAVE_CSV_DESCRIPTION = wxNewId();
 const long ControllerModelDialog::CONTROLLER_DMXCHANNEL = wxNewId();
 const long ControllerModelDialog::CONTROLLER_CASCADEDOWNPORT = wxNewId();
 const long ControllerModelDialog::CONTROLLER_DMXCHANNELCHAIN = wxNewId();
@@ -347,7 +346,7 @@ int GetPort() const { return _port; }
 virtual std::string GetType() const override { return "PORT"; }
 virtual void Draw(wxDC& dc, int portMargin, wxPoint mouse, wxPoint adjustedMouse, wxSize offset, float scale, bool printing, bool border, Model* lastDropped) override
 {
-    
+
     auto origBrush = dc.GetBrush();
     auto origPen = dc.GetPen();
     auto origText = dc.GetTextForeground();
@@ -624,7 +623,7 @@ public:
                 dc.SetPen(__modelOutlinePen);
             }
         }
-        
+
         if (udcpm != nullptr) {
 
             int maxSR = 15;
@@ -812,7 +811,7 @@ public:
             mnu.AppendSeparator();
             mnu.Append(ControllerModelDialog::CONTROLLER_DMXCHANNEL, "Set Channel");
             mnu.Append(ControllerModelDialog::CONTROLLER_DMXCHANNELCHAIN, "Set Channel and Chain");
-        }        
+        }
     }
 
     virtual bool HandlePopup(wxWindow* parent, wxCommandEvent& event, int id) override {
@@ -976,7 +975,7 @@ ControllerModelPrintout::ControllerModelPrintout(ControllerModelDialog* controll
     _paper_type(wxPAPER_LETTER),
     _max_x(600),
     _max_y(800),
-    _box_size(boxSize), 
+    _box_size(boxSize),
     _panel_size(panelSize)
 { }
 
@@ -1335,9 +1334,12 @@ void ControllerModelDialog::ReloadModels()
     for (const auto& it : *_mm) {
         if (it.second->GetDisplayAs() != "ModelGroup") {
             if (_cud->GetControllerPortModel(it.second->GetName(), 0) == nullptr &&
-                ((_autoLayout && !CheckBox_HideOtherControllerModels->GetValue()) ||
-                 ((_autoLayout && CheckBox_HideOtherControllerModels->GetValue() && (it.second->GetController() == nullptr || _controller->ContainsChannels(it.second->GetFirstChannel(), it.second->GetLastChannel()))) ||
-                 _controller->ContainsChannels(it.second->GetFirstChannel(), it.second->GetLastChannel())))) {
+                ((_autoLayout && !CheckBox_HideOtherControllerModels->GetValue()) || // hide models on other controllers not set
+                 ((_autoLayout && CheckBox_HideOtherControllerModels->GetValue() && (it.second->GetController() == nullptr ||
+                                                                                     _controller->GetName() == it.second->GetControllerName() ||
+                                                                                     it.second->GetControllerName() == "" ||
+                                                                                     _controller->ContainsChannels(it.second->GetFirstChannel(), it.second->GetLastChannel()))) ||
+                  _controller->ContainsChannels(it.second->GetFirstChannel(), it.second->GetLastChannel())))) {
                 _models.push_back(new ModelCMObject(nullptr, 0, it.second->GetName(), it.second->GetName(), _mm, _cud, _caps, wxPoint(5, 0), wxSize(HORIZONTAL_SIZE, VERTICAL_SIZE), BaseCMObject::STYLE_STRINGS, _scale));
             }
         }
@@ -1506,7 +1508,7 @@ void ControllerModelDialog::ReloadModels()
     PanelModels->Refresh();
 }
 
-void ControllerModelDialog::OnPopupCommand(wxCommandEvent &event) 
+void ControllerModelDialog::OnPopupCommand(wxCommandEvent &event)
 {
     static log4cpp::Category& logger_base = log4cpp::Category::getInstance(std::string("log_base"));
 
@@ -1515,10 +1517,7 @@ void ControllerModelDialog::OnPopupCommand(wxCommandEvent &event)
         PrintScreen();
     }
     else if (id == CONTROLLERModel_SAVE_CSV) {
-        SaveCSV(false);
-    }
-    else if (id == CONTROLLERModel_SAVE_CSV_DESCRIPTION) {
-        SaveCSV(true);
+        SaveCSV();
     }
     else if (id == CONTROLLER_REMOVEALLMODELS) {
 
@@ -1618,7 +1617,7 @@ wxBitmap ControllerModelDialog::RenderPicture(int startY, int startX, int width,
     return bitmap;
 }
 
-void ControllerModelDialog::SaveCSV(bool withDescription) {
+void ControllerModelDialog::SaveCSV() {
     wxLogNull logNo; //kludge: avoid "error 0" message from wxWidgets after new file is written
     wxString filename = wxFileSelector(_("Choose output file"), wxEmptyString, _controller->GetShortDescription(), wxEmptyString, "Export files (*.csv)|*.csv", wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
 
@@ -1633,7 +1632,7 @@ void ControllerModelDialog::SaveCSV(bool withDescription) {
 
     wxString const header = _controller->GetShortDescription() + "\n";
     f.Write(header);
-    std::vector<std::string> const lines = _cud->ExportAsCSV(withDescription);
+    std::vector<std::string> const lines = _cud->ExportAsCSV(ExportSettings::GetSettings(this));
     for (const auto& line : lines) {
         f.Write(line);
     }
@@ -2259,7 +2258,7 @@ void ControllerModelDialog::OnPanelControllerLeftDown(wxMouseEvent& event)
             auto m = dynamic_cast<ModelCMObject*>(it);
             if (m->IsMain()) {
 
-                // when a model is clicked on then it becomes the last dropped 
+                // when a model is clicked on then it becomes the last dropped
                 if (_lastDropped != m->GetModel()) {
 
                     // redraw the model that used to be last dropped
@@ -2323,6 +2322,19 @@ void ControllerModelDialog::OnPanelControllerLeftUp(wxMouseEvent& event)
 
 void ControllerModelDialog::OnPanelControllerLeftDClick(wxMouseEvent& event)
 {
+    wxPoint mouse = event.GetPosition();
+    wxPoint adjustedMouse = mouse + GetScrollPosition(PanelController);
+
+    ModelCMObject* cm = dynamic_cast<ModelCMObject*>(GetControllerCMObjectAt(mouse, adjustedMouse));
+    if (cm != nullptr) {
+        DropFromController(wxPoint(0, 0), cm->GetName(), PanelModels);
+
+        while (!_xLights->DoAllWork()) {
+            // dont get into a redraw loop from here
+            _xLights->GetOutputModelManager()->RemoveWork("ASAP", OutputModelManager::WORK_REDRAW_LAYOUTPREVIEW);
+        }
+        ReloadModels();
+    }
 }
 
 void ControllerModelDialog::OnPanelControllerMouseMove(wxMouseEvent& event)
@@ -2450,6 +2462,7 @@ std::string ControllerModelDialog::GetPortTooltip(UDControllerPort* port, int vi
     }
 
     if (port->GetVirtualStringCount() <= 1 || virtualString < 0 || (_caps != nullptr && !_caps->MergeConsecutiveVirtualStrings())) {
+
         if (port->GetModelCount() > 0 && port->Channels() > 0) {
             sc = wxString::Format("Start Channel: %d (#%d:%d)\nChannels: %d (Pixels %d)",
                 port->GetStartChannel(),
@@ -2590,7 +2603,7 @@ std::string ControllerModelDialog::GetModelTooltip(ModelCMObject* mob)
     std::string special;
     if (_controller->GetVendor() == "HinksPix" && _controller->GetModel() == "PRO") {
         if (m->GetSmartRemote() != 0) {
-            int port4 = m->GetControllerPort() % 4;
+            int port4 = (m->GetControllerPort() - 1) % 4 + 1;
             int port16 = ((m->GetControllerPort() - 1) % 4) * 4 + ((m->GetSmartRemote() - 1) % 4) + 1;
             special = wxString::Format("\nHinksPix 16 Port Long Range Port : %d\nHinksPix 4 Port Long Range Port : %d", port16, port4).ToStdString();
         }
@@ -2676,7 +2689,6 @@ void ControllerModelDialog::OnPanelControllerRightDown(wxMouseEvent& event)
     wxMenu mnu;
     mnu.Append(CONTROLLERModel_PRINT, "Print");
     mnu.Append(CONTROLLERModel_SAVE_CSV, "Save As CSV...");
-    mnu.Append(CONTROLLERModel_SAVE_CSV_DESCRIPTION, "Save As CSV with Description...");
 
     if (_cud->HasModels()) {
         mnu.Append(CONTROLLER_REMOVEALLMODELS, "Remove all models from controller");
@@ -2931,6 +2943,7 @@ void ControllerModelDialog::OnPanelModelsLeftDClick(wxMouseEvent& event)
 
     ModelCMObject* cm = dynamic_cast<ModelCMObject*>(GetModelsCMObjectAt(mouse));
     if (cm != nullptr) {
+        auto m = cm->GetName();
         DropModelFromModelsPaneOnModel(cm, _lastDropped, true);
 
         while (!_xLights->DoAllWork()) {
@@ -2938,6 +2951,53 @@ void ControllerModelDialog::OnPanelModelsLeftDClick(wxMouseEvent& event)
             _xLights->GetOutputModelManager()->RemoveWork("ASAP", OutputModelManager::WORK_REDRAW_LAYOUTPREVIEW);
         }
         ReloadModels();
+
+        for (const auto& it : _controllers)             {
+            cm = dynamic_cast<ModelCMObject*>(it);
+            if (cm != nullptr && cm->GetName() == m)                 {
+                EnsureSelectedModelIsVisible(cm);
+                break;
+            }
+        }
+    }
+}
+
+void ControllerModelDialog::EnsureSelectedModelIsVisible(ModelCMObject* cm)
+{
+    auto left = cm->GetRect().GetLeft();
+    auto right = cm->GetRect().GetRight();
+    auto top = cm->GetRect().GetTop();
+    auto bottom = cm->GetRect().GetBottom();
+
+    auto pos = GetScrollPosition(PanelController);
+
+    bool scrolled = false;
+
+    int x = ScrollBar_Controller_H->GetThumbPosition();
+    int y = ScrollBar_Controller_V->GetThumbPosition();
+
+    if (left < pos.x + LEFT_RIGHT_MARGIN + HORIZONTAL_SIZE + HORIZONTAL_GAP) {
+        x = left - 10;
+        scrolled = true;
+    }
+    else if (right > pos.x + PanelController->GetSize().GetWidth())         {
+        x = right - PanelController->GetSize().GetWidth() + 10;
+        scrolled = true;
+    }
+
+    if (bottom > pos.y + PanelController->GetSize().GetHeight()) {
+        y = bottom - PanelController->GetSize().GetHeight() + 10;
+        scrolled = true;
+    }
+    else if (top < pos.y) {
+        y = top - 10;
+        scrolled = true;
+    }
+
+    if (scrolled) {
+        ScrollBar_Controller_H->SetThumbPosition(x);
+        ScrollBar_Controller_V->SetThumbPosition(y);
+        PanelController->Refresh();
     }
 }
 

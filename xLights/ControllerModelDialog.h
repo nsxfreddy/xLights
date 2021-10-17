@@ -119,7 +119,6 @@ class ControllerModelDialog: public wxDialog
 
         static const long CONTROLLERModel_PRINT;
 		static const long CONTROLLERModel_SAVE_CSV;
-		static const long CONTROLLERModel_SAVE_CSV_DESCRIPTION;
 		static const long CONTROLLER_REMOVEALLMODELS;
 		static const long CONTROLLER_DMXCHANNEL;
 		static const long CONTROLLER_CASCADEDOWNPORT;
@@ -198,8 +197,9 @@ class ControllerModelDialog: public wxDialog
 		void ScrollToKey(int keyCode);
 		void OnKeyDown(wxKeyEvent& event);
 		void PrintScreen();
-		void SaveCSV(bool withDescription);
+		void SaveCSV();
 		double getFontSize();
+		void EnsureSelectedModelIsVisible(ModelCMObject* cm);
 
 		DECLARE_EVENT_TABLE()
 };

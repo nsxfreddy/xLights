@@ -30,6 +30,7 @@
 #include <wx/zipstrm.h>
 #include <wx/wfstream.h>
 #include <wx/version.h>
+#include <wx/tooltip.h>
 
 #include <cctype>
 #include <cstring>
@@ -93,6 +94,7 @@
 #include "TraceLog.h"
 #include "AboutDialog.h"
 #include "ExternalHooks.h"
+#include "ExportSettings.h"
 
 // Linux needs this
 #include <wx/stdpaths.h>
@@ -1214,6 +1216,8 @@ xLightsFrame::xLightsFrame(wxWindow* parent, wxWindowID id) :
     info.BestSize(sz);
     MainAuiManager->Update();
 
+    wxToolTip::SetAutoPop(20000); // globally set tooltips stay on screen for a long time - may not work on all platforms per wxWidgets documentation
+
     SetTitle( xlights_base_name + xlights_qualifier + " (Ver " + GetDisplayVersionString() + ") " + xlights_build_date );
 
     CheckBoxLightOutput = new AUIToolbarButtonWrapper(OutputToolBar, ID_CHECKBOX_LIGHT_OUTPUT);
@@ -1753,6 +1757,11 @@ xLightsFrame::xLightsFrame(wxWindow* parent, wxWindowID id) :
 #else
     config->Read(_("xLightsVideoReaderAccelerated"), &_hwVideoAccleration, false);
     VideoReader::SetHardwareAcceleratedVideo(_hwVideoAccleration);
+#endif
+
+#ifdef __WXMSW__
+    //make sure Direct2DRenderer is created on the main thread before the other threads need it
+    wxGraphicsRenderer::GetDirect2DRenderer();
 #endif
 
     bool bgShaders = false;
@@ -4810,23 +4819,25 @@ void xLightsFrame::CheckSequence(bool display)
         for (const auto& it : AllModels) {
             if (it.second->GetControllerName() != "") {
                 auto c = _outputManager.GetController(it.second->GetControllerName());
-                auto caps = c->GetControllerCaps();
-                if (!it.second->IsControllerConnectionValid() && (caps != nullptr && caps->GetMaxPixelPort() != 0 && caps->GetMaxSerialPort() != 0)) {
-                    wxString msg = wxString::Format("    ERR: Model %s on %s controller '%s:%s' has invalid controller connection '%s'.",
-                        (const char*)it.second->GetName().c_str(),
-                        (const char*)c->GetProtocol().c_str(),
-                        (const char*)c->GetName().c_str(),
-                        (const char*)c->GetIP().c_str(),
-                        (const char*)it.second->GetControllerConnectionString().c_str());
-                    LogAndWrite(f, msg.ToStdString());
-                    errcount++;
-                }
+                if (c != nullptr) {
+                    auto caps = c->GetControllerCaps();
+                    if (!it.second->IsControllerConnectionValid() && (caps != nullptr && caps->GetMaxPixelPort() != 0 && caps->GetMaxSerialPort() != 0)) {
+                        wxString msg = wxString::Format("    ERR: Model %s on %s controller '%s:%s' has invalid controller connection '%s'.",
+                            (const char*)it.second->GetName().c_str(),
+                            (const char*)c->GetProtocol().c_str(),
+                            (const char*)c->GetName().c_str(),
+                            (const char*)c->GetIP().c_str(),
+                            (const char*)it.second->GetControllerConnectionString().c_str());
+                        LogAndWrite(f, msg.ToStdString());
+                        errcount++;
+                    }
 
-                if (modelsByPortByController.find(c->GetName()) == modelsByPortByController.end()) {
-                    std::map<std::string, std::list<Model*>> pm;
-                    modelsByPortByController[c->GetName()] = pm;
+                    if (modelsByPortByController.find(c->GetName()) == modelsByPortByController.end()) {
+                        std::map<std::string, std::list<Model*>> pm;
+                        modelsByPortByController[c->GetName()] = pm;
+                    }
+                    modelsByPortByController[c->GetName()][wxString::Format("%s:%d:%d", it.second->IsPixelProtocol() ? _("PIXEL") : _("SERIAL"), it.second->GetControllerPort(), it.second->GetSmartRemote()).Lower().ToStdString()].push_back(it.second);
                 }
-                modelsByPortByController[c->GetName()][wxString::Format("%s:%d:%d", it.second->IsPixelProtocol() ? _("PIXEL") : _("SERIAL"), it.second->GetControllerPort(), it.second->GetSmartRemote()).Lower().ToStdString()].push_back(it.second);
             }
         }
 
@@ -5677,7 +5688,7 @@ void xLightsFrame::CheckSequence(bool display)
                     if (dups != "") {
                         wxString msg = wxString::Format("    WARN: SubModel '%s' contains duplicate nodes: %s. This may not render as expected.", (const char*)sm->GetFullName().c_str(), (const char*)dups.c_str());
                         LogAndWrite(f, msg.ToStdString());
-                        errcount++;
+                        warncount++;
                     }
                 }
             }
@@ -10009,12 +10020,13 @@ void xLightsFrame::OnMenuItem_ExportControllerConnectionsSelected(wxCommandEvent
     }
 
     auto controllers = GetOutputManager()->GetControllers();
+    ExportSettings::SETTINGS exportsettings = ExportSettings::GetSettings(this);
     for (const auto& it : controllers) {
         std::string check;
         UDController cud(it, &_outputManager, &AllModels, check, false);
         wxString const header = it->GetShortDescription() + "\n";
         f.Write(header);
-        std::vector<std::string> const lines = cud.ExportAsCSV(false);
+        std::vector<std::string> const lines = cud.ExportAsCSV(exportsettings);
         for (const auto& line : lines) {
             f.Write(line);
         }

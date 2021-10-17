@@ -46,6 +46,7 @@
 #include "UtilFunctions.h"
 #include "outputs/Output.h"
 #include "outputs/Controller.h"
+#include "outputs/ControllerEthernet.h"
 #include "../controllers/ControllerCaps.h"
 #include "CheckboxSelectDialog.h"
 #include "Parallel.h"
@@ -867,6 +868,15 @@ bool ModelManager::ReworkStartChannel() const
                         outputsChanged = true;
                     }
                 } else {
+
+                    // Handle controllers that must start serial outputs on a new universe and the first model is not DMX port 1
+                    // This relies on serial ports being added first to any controller channels
+                    if (itm == sortedmodels.front()) {
+                        if ((it->GetProtocol() == OUTPUT_E131 || it->GetProtocol() == OUTPUT_ARTNET) && caps->NeedsFullUniverseForDMX()) {
+                            ch += itm->GetControllerDMXChannel() - 1;
+                        }
+                    }
+
                     // when chained the use next channel
                     if (last != "" && itm->GetControllerDMXChannel() == 0 &&
                         (itm->GetModelChain() == last ||
@@ -898,6 +908,16 @@ bool ModelManager::ReworkStartChannel() const
                             outputsChanged = true;
                         }
                     }
+
+                    // Handle controllers that must start serial outputs on a new universe last model does not consume the full universe
+                    if ((it->GetProtocol() == OUTPUT_E131 || it->GetProtocol() == OUTPUT_ARTNET) && caps->NeedsFullUniverseForDMX()) {
+                        if (itm == sortedmodels.back()) {
+                            int unisize = it->GetFirstOutput()->GetChannels();
+                            if ((ch - 1) % unisize != 0) {
+                                ch += unisize - ((ch - 1) % unisize);
+                            }
+                        }
+                    }
                 }
 
                 logger_zcpp.debug("    Model %s on port %d chained to %s start channel %s.",
@@ -912,14 +932,15 @@ bool ModelManager::ReworkStartChannel() const
 
         if (it->IsAutoSize())
         {
-            if (it->GetChannels() != std::max((int32_t)1, (int32_t)ch - 1))
+            auto eth = dynamic_cast<const ControllerEthernet*>(it);
+            if (it->GetChannels() != std::max((int32_t)1, (int32_t)ch - 1) || (eth != nullptr && eth->IsUniversePerString()))
             {
                 logger_zcpp.debug("    Resizing output to %d channels.", std::max((int32_t)1, (int32_t)ch - 1));
 
                 auto oldC = it->GetChannels();
                 // Set channel size won't always change the number of channels for some protocols
                 it->SetChannelSize(std::max((int32_t)1, (int32_t)ch - 1), allSortedModels);
-                if (it->GetChannels() != oldC) {
+                if (it->GetChannels() != oldC || (eth != nullptr && eth->IsUniversePerString())) {
                     outputManager->SomethingChanged();
 
                     xlights->GetOutputModelManager()->AddASAPWork(OutputModelManager::WORK_NETWORK_CHANGE, "ReworkStartChannel");

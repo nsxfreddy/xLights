@@ -289,8 +289,8 @@ void PingWork::DoWork(WorkManager& workManager, wxSocketClient* client)
 
 std::string HTTPWork::GetTitle(const std::string& page)
 {
-	wxRegEx title("<title[^>]*>([^<]*)<");
-	if (title.Matches(page)) {
+	wxRegEx title("<[^>]*title[^>]*>(.*)<[^>]*\\/[^>]*title[^>]*>");
+	if (title.Matches(page) && title.GetMatchCount() > 1) {
 		wxString t = title.GetMatch(page, 1);
 
 		if (t.Contains("404")) {
@@ -310,6 +310,7 @@ std::string HTTPWork::GetControllerTypeBasedOnPageContent(const std::string& pag
 	if (Contains(page, "ECG-P12S")) return "J1Sys P12S";
 	if (Contains(page, "ECG-P12R")) return "J1Sys P12R";
 	if (Contains(page, "ECG-P12D")) return "J1Sys P12D";
+	if (Contains(page, "ECG-PIXAD8")) return "J1Sys PIXAD8";
 	if (Contains(page, "E6804")) return "SanDevices E6804";
 	if (Contains(page, "E682")) return "SanDevices E682";
 	if (Contains(page, "E681")) return "SanDevices E681";

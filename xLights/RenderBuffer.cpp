@@ -404,11 +404,14 @@ void PathDrawingContext::Clear() {
     gc->SetCompositionMode(wxCompositionMode::wxCOMPOSITION_SOURCE);
 }
 
-void TextDrawingContext::Clear() {
+void TextDrawingContext::Clear()
+{
+
     if (gc != nullptr) {
         delete gc;
         gc = nullptr;
     }
+
     DrawingContext::Clear();
 
 #ifdef __WXMSW__
@@ -416,7 +419,15 @@ void TextDrawingContext::Clear() {
     // along with custom build of wxWidgets until
     // https://trac.wxwidgets.org/ticket/19275#ticket
     // is applied/fixed
-    gc = wxGraphicsRenderer::GetDirect2DRenderer()->CreateContext(*dc);
+    static std::mutex singleThreadContextCreate;
+    {
+        // we need to lock before we do this otherwise we try to load libraries concurrently on many threads which causes problems
+        std::unique_lock<std::mutex> locker(singleThreadContextCreate);
+        gc = wxGraphicsRenderer::GetDirect2DRenderer()->CreateContext(*dc);
+        if (gc != nullptr) {
+            gc->SetPen(wxPen()); // we set a pen just to ensure the renderer is initialised ... if we dont do this there are scenarios where deleting it can run into issues
+        }
+    }
 #else
     gc = wxGraphicsContext::Create(*dc);
 #endif
@@ -502,6 +513,13 @@ void TextDrawingContext::SetFont(wxFontInfo &font, const xlColor &color) {
             || font.GetFaceName() != fontName
             || color != fontColor) {
             this->font = gc->CreateFont(font.GetPixelSize().y, font.GetFaceName(), style, color.asWxColor());
+
+#ifdef __WXMSW__
+            // if font is not true type then we get a null font and bad things happen so at least set it to a valid font ... Somehow we really should not allow the selection of invalid fonts
+            if (this->font.IsNull()) {
+                this->font = gc->CreateFont(font.GetPixelSize().y, "segoe ui", style, color.asWxColor());
+            }
+#endif
 
             fontStyle = style;
             fontSize = font.GetPixelSize().y;
